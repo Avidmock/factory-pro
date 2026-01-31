@@ -1,0 +1,166 @@
+﻿[PATCH A — HTML: Paste this AFTER the Order field block and BEFORE the Operation field block]
+
+                <!-- Model -->
+                <div class="field">
+                    <div class="field-label">
+                        <span>🪑 Модел</span>
+                    </div>
+                    <select id="modelSelect" class="field-input"></select>
+                </div>
+
+                <!-- Part -->
+                <div class="field">
+                    <div class="field-label">
+                        <span>🧩 Детайл</span>
+                    </div>
+                    <select id="partSelect" class="field-input"></select>
+                </div>
+
+
+[PATCH B — JS: Paste this AFTER these lines:
+const STORAGE_KEY = 'factory_pro_logs';
+const SETTINGS_KEY = 'factory_pro_settings';
+]
+
+        // ===== ROUTING + BOM (офлайн старт - Полукс) =====
+        const ROUTING_DATA = {
+            models: [
+                {
+                    model_code: "POLUX",
+                    model_name: "Полукс",
+                    parts: [
+                        {
+                            part_code: "BK",
+                            part_name: "Заден крак",
+                            qty_per_product: 2,
+                            operations: [
+                                { step_no: 1.1, operation_name: "Разкрояване по дължина", machine: "Пендула" },
+                                { step_no: 1.2, operation_name: "Разкрояване по ширина", machine: "Банциг / Дин" },
+                                { step_no: 1.3, operation_name: "4-странно рендосване", machine: "4-странка" },
+                                { step_no: 1.5, operation_name: "CNC обработка", machine: "CNC TWIN" }
+                            ]
+                        },
+                        {
+                            part_code: "PK",
+                            part_name: "Преден крак",
+                            qty_per_product: 2,
+                            operations: [
+                                { step_no: 2.1, operation_name: "Разкрояване по дължина", machine: "Пендула" },
+                                { step_no: 2.2, operation_name: "Разкрояване по ширина", machine: "Банциг / Дин" },
+                                { step_no: 2.3, operation_name: "4-странно рендосване", machine: "4-странка" },
+                                { step_no: 2.4, operation_name: "Окрайчване по дължина", machine: "Циркуляр" }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        function initRoutingUI() {
+            const modelSelect = document.getElementById("modelSelect");
+            const partSelect = document.getElementById("partSelect");
+            if (!modelSelect || !partSelect) return;
+
+            modelSelect.innerHTML = ROUTING_DATA.models
+                .map(m => `<option value="${m.model_code}">${m.model_name} (${m.model_code})</option>`)
+                .join("");
+
+            modelSelect.addEventListener("change", populateParts);
+            partSelect.addEventListener("change", setNextOperationForSelection);
+
+            populateParts();
+        }
+
+        function getSelectedModel() {
+            const code = document.getElementById("modelSelect")?.value || "";
+            return ROUTING_DATA.models.find(m => m.model_code === code) || ROUTING_DATA.models[0];
+        }
+
+        function populateParts() {
+            const model = getSelectedModel();
+            const partSelect = document.getElementById("partSelect");
+            if (!partSelect) return;
+
+            partSelect.innerHTML = model.parts
+                .map(p => `<option value="${p.part_code}">${p.part_name} (x${p.qty_per_product})</option>`)
+                .join("");
+
+            setNextOperationForSelection();
+        }
+
+        function getSelectedPart(model) {
+            const code = document.getElementById("partSelect")?.value || "";
+            return model.parts.find(p => p.part_code === code) || model.parts[0];
+        }
+
+        function getLogs() {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        }
+
+        function getCurrentOrderNumber() {
+            const orderText = document.getElementById("orderInput")?.value || "";
+            return orderText.includes("|") ? orderText.split("|")[1] : orderText;
+        }
+
+        function setNextOperationForSelection() {
+            const model = getSelectedModel();
+            const part = getSelectedPart(model);
+            if (!part) return;
+
+            const orderNumber = getCurrentOrderNumber();
+            const logs = getLogs().filter(l =>
+                (orderNumber ? l.orderNumber === orderNumber : true) &&
+                l.model_code === model.model_code &&
+                l.part_code === part.part_code
+            );
+
+            const lastStep = logs.length ? Math.max(...logs.map(l => Number(l.step_no || 0))) : 0;
+            const sortedOps = part.operations.slice().sort((a, b) => a.step_no - b.step_no);
+            const nextOp = sortedOps.find(op => op.step_no > lastStep);
+
+            const opInput = document.getElementById("operationInput");
+            const decoded = document.getElementById("operationDecoded");
+            if (!opInput || !decoded) return;
+
+            if (!nextOp) {
+                opInput.value = "Завършен детайл";
+                decoded.textContent = "Няма следваща операция";
+            } else {
+                opInput.value = `STEP|${nextOp.step_no}|${nextOp.operation_name}|${nextOp.machine}`;
+                decoded.textContent = `Следваща: ${nextOp.step_no} – ${nextOp.operation_name} (${nextOp.machine})`;
+            }
+
+            decoded.classList.add("show");
+            opInput.classList.add("filled");
+            validateForm();
+        }
+
+
+[PATCH C — JS: Add ONE line inside your existing DOMContentLoaded()]
+
+    initRoutingUI();
+
+
+[PATCH D — JS: Add this in onScanSuccess() BEFORE closeScanner();]
+
+            if (currentScanField === 'order') {
+                setNextOperationForSelection();
+            }
+
+
+[PATCH E — JS: Add this inside submit handler AFTER const data = {...};]
+
+            const model = getSelectedModel();
+            const part = getSelectedPart(model);
+
+            data.model_code = model?.model_code || '';
+            data.model_name = model?.model_name || '';
+            data.part_code = part?.part_code || '';
+            data.part_name = part?.part_name || '';
+
+            const opParts2 = (data.operation || '').split('|');
+            if (opParts2[0] === 'STEP') {
+                data.step_no = Number(opParts2[1] || 0);
+                data.operation_name = opParts2[2] || '';
+                data.machine2 = opParts2[3] || '';
+            }

@@ -1,0 +1,12 @@
+{
+  "name": "factory-pro-bg",
+  "version": "1.0.0",
+  "description": "Система за производствен контрол на български",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve -p 8000"
+  },
+  "keywords": ["производство", "контрол", "баркод"],
+  "author": "Factory Pro Bulgaria",
+  "license": "MIT"
+}

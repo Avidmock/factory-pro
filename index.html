@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Factory Pro - Производствен Контрол</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --primary: #FF6B35;
+      --primary-dark: #E5552E;
+      --success: #06D6A0;
+      --danger: #EF476F;
+      --warning: #FFD166;
+      --dark: #1a1a2e;
+      --light: #f8f9fa;
+      --gray: #6c757d;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 10px;
+    }
+
+    /* Navigation */
+    .nav-tabs {
+      display: flex;
+      background: white;
+      border-radius: 16px 16px 0 0;
+      overflow: hidden;
+      max-width: 520px;
+      margin: 0 auto;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    }
+    .nav-tab {
+      flex: 1;
+      padding: 14px 10px;
+      text-align: center;
+      background: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--gray);
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .nav-tab.active { background: var(--primary); color: white; }
+
+    /* Container */
+    .container {
+      background: white;
+      border-radius: 0 0 20px 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 520px;
+      margin: 0 auto 18px;
+      display: none;
+      overflow: hidden;
+    }
+    .container.active { display: block; }
+
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 22px 18px;
+      text-align: center;
+    }
+    .header h1 { font-size: 20px; font-weight: 800; }
+    .header p { font-size: 13px; opacity: 0.9; margin-top: 5px; }
+
+    .content { padding: 18px; }
+
+    .field { margin-bottom: 14px; }
+    .field-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 7px;
+    }
+    .field-label span {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--dark);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .scan-btn {
+      background: var(--success);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .field-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fafafa;
+      transition: 0.2s;
+    }
+    .field-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.10);
+    }
+    .field-input.filled { border-color: var(--success); background: rgba(6, 214, 160, 0.06); }
+    .decoded-info {
+      font-size: 12px;
+      color: var(--success);
+      margin-top: 6px;
+      padding: 6px 10px;
+      background: rgba(6, 214, 160, 0.1);
+      border-radius: 8px;
+      display: none;
+    }
+    .decoded-info.show { display: block; }
+
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    /* Dashboard */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      padding: 14px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .stat-card.highlight {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+    }
+    .stat-value { font-size: 26px; font-weight: 900; }
+    .stat-label { font-size: 12px; opacity: 0.85; margin-top: 3px; }
+
+    .activity-item {
+      display: flex; gap: 10px; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid #eee;
+    }
+    .activity-icon {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--success); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900;
+    }
+    .activity-info { flex: 1; }
+    .activity-title { font-weight: 700; font-size: 13px; }
+    .activity-time { font-size: 12px; color: var(--gray); }
+    .activity-qty { font-weight: 900; color: var(--success); }
+
+    .btn-group { display: flex; gap: 10px; margin-top: 14px; }
+    .btn {
+      flex: 1; padding: 12px; border: none; border-radius: 10px;
+      font-weight: 800; cursor: pointer;
+    }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+
+    /* Control table */
+    .control-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .control-table th {
+      background: var(--dark); color: white;
+      padding: 10px 8px; text-align: left;
+    }
+    .control-table td { padding: 10px 8px; border-bottom: 1px solid #eee; }
+    .status-ok { color: var(--success); font-weight: 900; }
+    .status-danger { color: var(--danger); font-weight: 900; }
+
+    /* Scanner modal */
+    .scanner-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 2000;
+      align-items: center; justify-content: center;
+      flex-direction: column; padding: 18px;
+    }
+    .scanner-modal.show { display: flex; }
+    .scanner-title { color: white; font-weight: 800; margin-bottom: 12px; }
+    #scanner-container { width: 100%; max-width: 360px; border-radius: 14px; overflow: hidden; }
+    .scanner-close {
+      margin-top: 14px; padding: 12px 26px;
+      background: var(--danger); color: white;
+      border: none; border-radius: 10px;
+      font-weight: 900; cursor: pointer;
+    }
+
+    /* Success screen */
+    .success-screen {
+      display: none; position: fixed; inset: 0;
+      background: var(--success);
+      z-index: 2100;
+      align-items: center; justify-content: center;
+      flex-direction: column;
+    }
+    .success-screen.show { display: flex; }
+    .success-icon { font-size: 86px; color: white; }
+    .success-text { color: white; font-size: 26px; font-weight: 900; margin-top: 6px; }
+    .success-details { color: rgba(255,255,255,0.92); margin-top: 8px; font-weight: 700; }
+
+    .small-note { font-size: 12px; color: var(--gray); margin-top: 8px; }
+  </style>
+</head>
+
+<body>
+  <!-- NAV -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('production')">📝 Отчитане</button>
+    <button class="nav-tab" onclick="switchTab('dashboard')">📊 Табло</button>
+    <button class="nav-tab" onclick="switchTab('control')">⚠️ Контрол</button>
+    <button class="nav-tab" onclick="switchTab('settings')">⚙️ Настройки</button>
+  </div>
+
+  <!-- PRODUCTION -->
+  <div id="production-container" class="container active">
+    <div class="header">
+      <h1>🏭 Производствен Контрол</h1>
+      <p>Сканирай и отчети произведеното</p>
+    </div>
+
+    <div class="content">
+      <form id="productionForm">
+        <!-- Worker -->
+        <div class="field">
+          <div class="field-label">
+            <span>👤 Работник</span>
+            <button type="button" class="scan-btn" onclick="startScan('worker')">📷 Сканирай</button>
+          </div>
+          <input id="workerInput" class="field-input" placeholder="Сканирай..." readonly />
+          <div id="workerDecoded" class="decoded-info"></div>
+        </div>
+
+        <!-- Order -->
+        <div class="field">
+          <div class="field-label">
+            <span>🧾 Поръчка</span>
+            <button type="button" class="scan-btn" onclick="startScan('order')">📷 Сканирай</button>
+          </div>
+          <input id="orderInput" class="field-input" placeholder="ORD|2026-0001" readonly />
+          <div id="orderDecoded" class="decoded-info"></div>
+        </div>
+
+        <!-- Order quantity (needed for Control calculations) -->
+        <div class="field">
+          <div class="field-label">
+            <span>📦 Количество поръчка</span>
+          </div>
+          <input id="orderQtyInput" type="number" class="field-input" placeholder="брой столове" min="1" inputmode="numeric" />
+          <div class="small-note">Това поле е нужно за “Контрол” (нужно = поръчка × BOM).</div>
+        </div>
+
+        <!-- Model -->
+        <div class="field">
+          <div class="field-label"><span>🪑 Модел</span></div>
+          <select id="modelSelect" class="field-input"></select>
+        </div>
+
+        <!-- Part -->
+        <div class="field">
+          <div class="field-label"><span>🧩 Детайл</span></div>
+          <select id="partSelect" class="field-input"></select>
+        </div>
+
+        <!-- Operation (auto next) -->
+        <div class="field">
+          <div class="field-label">
+            <span>⚙️ Операция</span>
+            <button type="button" class="scan-btn" onclick="startScan('operation')">📷 Сканирай</button>
+          </div>
+          <input id="operationInput" class="field-input" placeholder="Следваща операция…" readonly />
+          <div id="operationDecoded" class="decoded-info"></div>
+        </div>
+
+        <!-- Quantity -->
+        <div class="field">
+          <div class="field-label"><span>🔢 Количество</span></div>
+          <input type="number" id="quantityInput" class="field-input" placeholder="брой детайли" min="1" max="999" inputmode="numeric" />
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn" disabled>✓ ЗАПИШИ ОТЧЕТА</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard-container" class="container">
+    <div class="header">
+      <h1>📊 Табло</h1>
+      <p>Дневна статистика</p>
+    </div>
+    <div class="content">
+      <div class="stats-grid">
+        <div class="stat-card highlight">
+          <div class="stat-value" id="todayRecords">0</div>
+          <div class="stat-label">Записи днес</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="todayQty">0</div>
+          <div class="stat-label">Детайли днес</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalRecords">0</div>
+          <div class="stat-label">Общо записи</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="activeOrders">0</div>
+          <div class="stat-label">Активни поръчки</div>
+        </div>
+      </div>
+
+      <div style="font-weight:900; margin: 6px 0 10px;">📋 Последна активност</div>
+      <div id="recentActivity"></div>
+
+      <div class="btn-group">
+        <button class="btn btn-success" onclick="exportCSV()">💾 Експорт CSV</button>
+        <button class="btn btn-danger" onclick="clearData()">🗑️ Изчисти</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROL -->
+  <div id="control-container" class="container">
+    <div class="header">
+      <h1>⚠️ Контрол</h1>
+      <p>Реални липси по BOM + Routing</p>
+    </div>
+    <div class="content">
+      <div class="field">
+        <div class="field-label"><span>🧾 Поръчка (за контрол)</span></div>
+        <input id="controlOrderInput" class="field-input" placeholder="ORD|2026-0001" />
+      </div>
+      <div class="field">
+        <div class="field-label"><span>📦 Количество поръчка (столове)</span></div>
+        <input id="controlOrderQty" type="number" class="field-input" placeholder="напр. 60" min="1" />
+      </div>
+      <button class="btn btn-success" style="width:100%; margin-bottom: 12px;" onclick="updateControl()">Обнови Контрол</button>
+
+      <div style="font-weight:900; margin-bottom: 10px;">
+        Окомплектовани: <span id="completedChairs">0</span> стола
+      </div>
+
+      <table class="control-table">
+        <thead>
+          <tr>
+            <th>Детайл</th>
+            <th>Нужно</th>
+            <th>Произв.</th>
+            <th>Липса</th>
+          </tr>
+        </thead>
+        <tbody id="controlTableBody"></tbody>
+      </table>
+
+      <div class="small-note" style="margin-top:10px;">
+        “Произв.” се смята от записите в localStorage за избраната поръчка и детайл.
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="settings-container" class="container">
+    <div class="header">
+      <h1>⚙️ Настройки</h1>
+      <p>Конфигурация на системата</p>
+    </div>
+    <div class="content">
+      <div class="field">
+        <div class="field-label"><span>🏭 Код на фабрика</span></div>
+        <input type="text" class="field-input" id="factoryCode" value="factory_001" />
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>📛 Име на фабрика</span></div>
+        <input type="text" class="field-input" id="factoryName" value="Фабрика за столове Милано" />
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>📷 Камера</span></div>
+        <select class="field-input" id="cameraSelect">
+          <option value="environment">Задна камера</option>
+          <option value="user">Предна камера</option>
+        </select>
+      </div>
+
+      <button class="btn btn-success" style="width:100%;" onclick="saveSettings()">💾 Запази настройки</button>
+    </div>
+  </div>
+
+  <!-- Scanner Modal -->
+  <div id="scannerModal" class="scanner-modal">
+    <div class="scanner-title" id="scannerTitle">Сканирай</div>
+    <div id="scanner-container"></div>
+    <button class="scanner-close" onclick="closeScanner()">✕ Затвори</button>
+  </div>
+
+  <!-- Success Screen -->
+  <div id="successScreen" class="success-screen">
+    <div class="success-icon">✓</div>
+    <div class="success-text">ЗАПИСАНО!</div>
+    <div class="success-details" id="successDetails"></div>
+  </div>
+
+  <script>
+    // ===== State =====
+    let currentScanField = null;
+    let html5QrCode = null;
+
+    // ===== Storage keys =====
+    const STORAGE_KEY = 'factory_pro_logs';
+    const SETTINGS_KEY = 'factory_pro_settings';
+
+    // ===== ROUTING + BOM (Полукс) =====
+    const ROUTING_DATA = {
+      models: [
+        {
+          model_code: "POLUX",
+          model_name: "Полукс",
+          parts: [
+            {
+              part_code: "BK",
+              part_name: "Заден крак",
+              qty_per_product: 2,
+              operations: [
+                { step_no: 1.1, operation_name: "Разкрояване по дължина", machine: "Пендула" },
+                { step_no: 1.2, operation_name: "Разкрояване по ширина", machine: "Банциг / Дин" },
+                { step_no: 1.3, operation_name: "4-странно рендосване", machine: "4-странка" },
+                { step_no: 1.5, operation_name: "CNC обработка", machine: "CNC TWIN" }
+              ]
+            },
+            {
+              part_code: "PK",
+              part_name: "Преден крак",
+              qty_per_product: 2,
+              operations: [
+                { step_no: 2.1, operation_name: "Разкрояване по дължина", machine: "Пендула" },
+                { step_no: 2.2, operation_name: "Разкрояване по ширина", machine: "Банциг / Дин" },
+                { step_no: 2.3, operation_name: "4-странно рендосване", machine: "4-странка" },
+                { step_no: 2.4, operation_name: "Окрайчване по дължина", machine: "Циркуляр" }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+    // ===== Tab navigation =====
+    function switchTab(tab) {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
+
+      // activate matching button safely
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        const oc = btn.getAttribute('onclick') || '';
+        if (oc.includes(`switchTab('${tab}')`) || oc.includes(`switchTab("${tab}")`)) {
+          btn.classList.add('active');
+        }
+      });
+
+      const container = document.getElementById(`${tab}-container`);
+      if (container) container.classList.add('active');
+
+      if (tab === 'dashboard') updateDashboard();
+      if (tab === 'control') updateControl();
+    }
+
+    // ===== Routing UI =====
+    function initRoutingUI() {
+      const modelSelect = document.getElementById("modelSelect");
+      const partSelect = document.getElementById("partSelect");
+      if (!modelSelect || !partSelect) return;
+
+      modelSelect.innerHTML = ROUTING_DATA.models
+        .map(m => `<option value="${m.model_code}">${m.model_name} (${m.model_code})</option>`)
+        .join("");
+
+      modelSelect.addEventListener("change", populateParts);
+      partSelect.addEventListener("change", setNextOperationForSelection);
+
+      populateParts();
+    }
+
+    function getSelectedModel() {
+      const code = document.getElementById("modelSelect")?.value || "";
+      return ROUTING_DATA.models.find(m => m.model_code === code) || ROUTING_DATA.models[0];
+    }
+
+    function populateParts() {
+      const model = getSelectedModel();
+      const partSelect = document.getElementById("partSelect");
+      if (!partSelect) return;
+
+      partSelect.innerHTML = model.parts
+        .map(p => `<option value="${p.part_code}">${p.part_name} (x${p.qty_per_product})</option>`)
+        .join("");
+
+      setNextOperationForSelection();
+    }
+
+    function getSelectedPart(model) {
+      const code = document.getElementById("partSelect")?.value || "";
+      return model.parts.find(p => p.part_code === code) || model.parts[0];
+    }
+
+    function getLogs() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    }
+
+    function getCurrentOrderNumber() {
+      const orderText = document.getElementById("orderInput")?.value || "";
+      return orderText.includes("|") ? orderText.split("|")[1] : orderText;
+    }
+
+    function setNextOperationForSelection() {
+      const model = getSelectedModel();
+      const part = getSelectedPart(model);
+      if (!part) return;
+
+      const orderNumber = getCurrentOrderNumber();
+      const logs = getLogs().filter(l =>
+        (orderNumber ? l.orderNumber === orderNumber : true) &&
+        l.model_code === model.model_code &&
+        l.part_code === part.part_code
+      );
+
+      const lastStep = logs.length ? Math.max(...logs.map(l => Number(l.step_no || 0))) : 0;
+      const sortedOps = part.operations.slice().sort((a, b) => a.step_no - b.step_no);
+      const nextOp = sortedOps.find(op => op.step_no > lastStep);
+
+      const opInput = document.getElementById("operationInput");
+      const decoded = document.getElementById("operationDecoded");
+      if (!opInput || !decoded) return;
+
+      if (!nextOp) {
+        opInput.value = "Завършен детайл";
+        decoded.textContent = "Няма следваща операция";
+      } else {
+        opInput.value = `STEP|${nextOp.step_no}|${nextOp.operation_name}|${nextOp.machine}`;
+        decoded.textContent = `Следваща: ${nextOp.step_no} – ${nextOp.operation_name} (${nextOp.machine})`;
+      }
+      decoded.classList.add("show");
+      opInput.classList.add("filled");
+      validateForm();
+    }
+
+    // ===== Form validation =====
+    function setupFormValidation() {
+      ['workerInput', 'orderInput', 'operationInput', 'quantityInput', 'orderQtyInput'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', validateForm);
+      });
+    }
+
+    function validateForm() {
+      const worker = document.getElementById('workerInput').value;
+      const order = document.getElementById('orderInput').value;
+      const operation = document.getElementById('operationInput').value;
+      const quantity = document.getElementById('quantityInput').value;
+
+      const isValid = worker && order && operation && quantity && parseInt(quantity) > 0;
+      document.getElementById('submitBtn').disabled = !isValid;
+    }
+
+    // ===== QR Scanner =====
+    function startScan(field) {
+      currentScanField = field;
+
+      const titles = {
+        worker: '👤 Сканирай бадж на работник',
+        order: '🧾 Сканирай код на поръчка',
+        operation: '⚙️ Сканирай код на операция'
+      };
+      document.getElementById('scannerTitle').textContent = titles[field] || 'Сканирай';
+      document.getElementById('scannerModal').classList.add('show');
+
+      const cameraFacing = document.getElementById('cameraSelect')?.value || 'environment';
+
+      // clear container from previous session (important for html5-qrcode)
+      document.getElementById('scanner-container').innerHTML = "";
+
+      html5QrCode = new Html5Qrcode("scanner-container");
+      html5QrCode.start(
+        { facingMode: cameraFacing },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        onScanSuccess,
+        () => {}
+      ).catch(err => {
+        console.error("Camera error:", err);
+        alert("Грешка при достъп до камерата. Разреши камерата и опитай пак.");
+        closeScanner();
+      });
+    }
+
+    function onScanSuccess(decodedText) {
+      if (navigator.vibrate) navigator.vibrate(100);
+
+      const input = document.getElementById(`${currentScanField}Input`);
+      if (input) {
+        input.value = decodedText;
+        input.classList.add('filled');
+      }
+
+      const decoded = decodeQR(decodedText, currentScanField);
+      const decodedDiv = document.getElementById(`${currentScanField}Decoded`);
+      if (decoded && decodedDiv) {
+        decodedDiv.textContent = decoded;
+        decodedDiv.classList.add('show');
+      }
+
+      // If order scanned -> update next op
+      if (currentScanField === 'order') {
+        setNextOperationForSelection();
+        // sync control tab inputs
+        document.getElementById('controlOrderInput').value = decodedText;
+        const oq = document.getElementById('orderQtyInput').value;
+        document.getElementById('controlOrderQty').value = oq;
+      }
+
+      closeScanner();
+      validateForm();
+    }
+
+    function closeScanner() {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+      }
+      document.getElementById('scannerModal').classList.remove('show');
+      currentScanField = null;
+    }
+
+    function decodeQR(text, type) {
+      const parts = String(text || '').split('|');
+      if (type === 'worker' && parts[0] === 'WRK') return `✓ ${parts[2] || 'Работник'} (ID: ${parts[1]})`;
+      if (type === 'order' && parts[0] === 'ORD') return `✓ Поръчка: ${parts[1]}`;
+      if (type === 'operation' && parts[0] === 'OP') return `✓ ${parts[2] || ''} ${parts[3] || ''} (${parts[4] || ''})`;
+      return null;
+    }
+
+    // ===== Settings =====
+    function loadSettings() {
+      const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+      if (saved.factoryCode) document.getElementById('factoryCode').value = saved.factoryCode;
+      if (saved.factoryName) document.getElementById('factoryName').value = saved.factoryName;
+      if (saved.cameraSelect) document.getElementById('cameraSelect').value = saved.cameraSelect;
+    }
+
+    function saveSettings() {
+      const payload = {
+        factoryCode: document.getElementById('factoryCode').value || '',
+        factoryName: document.getElementById('factoryName').value || '',
+        cameraSelect: document.getElementById('cameraSelect').value || 'environment'
+      };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(payload));
+      alert('Запазено ✓');
+    }
+
+    // ===== Helpers for Control =====
+    function safeNumber(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function isStepOperation(value) {
+      return String(value || '').startsWith('STEP|');
+    }
+
+    function parseStepOperation(value) {
+      // STEP|1.1|name|machine
+      const parts = String(value || '').split('|');
+      if (parts[0] !== 'STEP') return null;
+      return {
+        step_no: safeNumber(parts[1]),
+        operation_name: parts[2] || '',
+        machine2: parts[3] || ''
+      };
+    }
+
+    // ===== Submit =====
+    document.getElementById('productionForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const workerValue = document.getElementById('workerInput').value;
+      const orderValue  = document.getElementById('orderInput').value;
+      const orderNumber = getCurrentOrderNumber();
+      const orderQty    = safeNumber(document.getElementById('orderQtyInput').value);
+      const operationValue = document.getElementById('operationInput').value;
+      const quantityValue  = safeNumber(document.getElementById('quantityInput').value);
+
+      const model = getSelectedModel();
+      const part  = getSelectedPart(model);
+
+      const data = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        date: new Date().toLocaleDateString('bg-BG'),
+        time: new Date().toLocaleTimeString('bg-BG'),
+
+        worker: workerValue,
+        order: orderValue,
+        orderNumber: orderNumber,
+        orderQty: orderQty,
+
+        model_code: model?.model_code || '',
+        model_name: model?.model_name || '',
+        part_code: part?.part_code || '',
+        part_name: part?.part_name || '',
+        qty_per_product: safeNumber(part?.qty_per_product),
+
+        operation: operationValue,
+        quantity: quantityValue
+      };
+
+      // If operation is STEP|... parse it
+      if (isStepOperation(operationValue)) {
+        const op = parseStepOperation(operationValue);
+        if (op) {
+          data.step_no = op.step_no;
+          data.operation_name = op.operation_name;
+          data.machine2 = op.machine2;
+        }
+      } else {
+        // Optional: if scanned operation code is OP|MODEL|DETAIL|OPxx|MACHINE
+        const partsOp = String(operationValue || '').split('|');
+        if (partsOp[0] === 'OP' && partsOp.length >= 5) {
+          data.operation_name = partsOp[3] || '';
+          data.machine2 = partsOp.slice(4).join('|');
+        }
+      }
+
+      const logs = getLogs();
+      logs.push(data);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+
+      // Show success
+      document.getElementById('successDetails').textContent =
+        `${data.part_name} | ${data.quantity} бр. | ${data.orderNumber || ''}`;
+      document.getElementById('successScreen').classList.add('show');
+
+      setTimeout(() => {
+        document.getElementById('successScreen').classList.remove('show');
+        resetForm();
+        updateDashboard();
+        // update next operation for same order/model/part
+        setNextOperationForSelection();
+      }, 1200);
+    });
+
+    function resetForm() {
+      // Keep order qty if you want; but do not change your UI structure.
+      ['workerInput','orderInput','operationInput','quantityInput'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.value = ''; el.classList.remove('filled'); }
+      });
+      ['workerDecoded','orderDecoded','operationDecoded'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.textContent = ''; el.classList.remove('show'); }
+      });
+
+      // Sync control inputs with current (cleared) order
+      document.getElementById('controlOrderInput').value = '';
+      document.getElementById('controlOrderQty').value = document.getElementById('orderQtyInput').value || '';
+
+      validateForm();
+    }
+
+    // ===== Dashboard =====
+    function updateDashboard() {
+      const logs = getLogs();
+      const today = new Date().toLocaleDateString('bg-BG');
+
+      const todayLogs = logs.filter(l => l.date === today);
+      const todayQty = todayLogs.reduce((s,l) => s + safeNumber(l.quantity), 0);
+
+      document.getElementById('todayRecords').textContent = String(todayLogs.length);
+      document.getElementById('todayQty').textContent = String(todayQty);
+      document.getElementById('totalRecords').textContent = String(logs.length);
+
+      const orders = new Set(logs.map(l => l.orderNumber || '').filter(Boolean));
+      document.getElementById('activeOrders').textContent = String(orders.size);
+
+      const recent = [...logs].slice(-10).reverse();
+      const box = document.getElementById('recentActivity');
+      if (!box) return;
+
+      box.innerHTML = recent.map(r => `
+        <div class="activity-item">
+          <div class="activity-icon">✓</div>
+          <div class="activity-info">
+            <div class="activity-title">${(r.part_name||'Детайл')} — ${(r.operation_name||r.operation||'')}</div>
+            <div class="activity-time">${r.date||''} ${r.time||''} — ${(r.worker||'')}</div>
+          </div>
+          <div class="activity-qty">${safeNumber(r.quantity)} бр.</div>
+        </div>
+      `).join('');
+    }
+
+    function exportCSV() {
+      const logs = getLogs();
+      if (!logs.length) return alert('Няма данни.');
+      const keys = Object.keys(logs[0]);
+
+      const csv = [
+        keys.join(','),
+        ...logs.map(r => keys.map(k => JSON.stringify(r[k] ?? '')).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `factory_pro_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearData() {
+      if (!confirm('Сигурен ли си? Това трие всички записи.')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      updateDashboard();
+      updateControl();
+      alert('Изчистено ✓');
+    }
+
+    // ===== Control =====
+    function updateControl() {
+      const orderText = document.getElementById('controlOrderInput').value || '';
+      const orderNumber = orderText.includes('|') ? orderText.split('|')[1] : orderText;
+      const orderQty = safeNumber(document.getElementById('controlOrderQty').value);
+
+      const tbody = document.getElementById('controlTableBody');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+
+      const model = getSelectedModel();
+      const parts = (model && model.parts) ? model.parts : [];
+
+      const logs = getLogs().filter(l => (orderNumber ? l.orderNumber === orderNumber : false));
+
+      // Produced logic:
+      // We count "produced" for each part as qty at the FINAL step (max step_no for that part in routing)
+      let completedChairs = orderQty > 0 ? orderQty : 0;
+
+      parts.forEach(p => {
+        const required = orderQty > 0 ? orderQty * safeNumber(p.qty_per_product) : 0;
+
+        const finalStep = (p.operations && p.operations.length)
+          ? Math.max(...p.operations.map(o => safeNumber(o.step_no)))
+          : 0;
+
+        const produced = logs
+          .filter(l => l.part_code === p.part_code && safeNumber(l.step_no) === finalStep)
+          .reduce((s,l) => s + safeNumber(l.quantity), 0);
+
+        const shortage = Math.max(0, required - produced);
+
+        // chair completeness estimate
+        if (safeNumber(p.qty_per_product) > 0) {
+          const chairsFromPart = Math.floor(produced / safeNumber(p.qty_per_product));
+          completedChairs = Math.min(completedChairs, chairsFromPart);
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.part_name}</td>
+          <td>${required}</td>
+          <td class="${produced >= required ? 'status-ok' : 'status-danger'}">${produced}</td>
+          <td class="${shortage === 0 ? 'status-ok' : 'status-danger'}">${shortage}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('completedChairs').textContent = String(
+        Number.isFinite(completedChairs) ? completedChairs : 0
+      );
+    }
+
+    // ===== Boot =====
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+      initRoutingUI();
+      setupFormValidation();
+      validateForm();
+      updateDashboard();
+
+      // keep control qty synced with order qty field
+      document.getElementById('orderQtyInput')?.addEventListener('input', () => {
+        document.getElementById('controlOrderQty').value = document.getElementById('orderQtyInput').value || '';
+      });
+    });
+  </script>
+</body>
+</html>
+
+
